@@ -3,25 +3,33 @@ using CashRegisterNS.Currency;
 using System.Configuration;
 
 
-Console.WriteLine("Enter filename");
+Console.WriteLine("Enter full path of input file.");
 string? filename = Console.ReadLine();
 if (filename is null)
 {
-    Console.WriteLine("Filename is required");
+    Console.WriteLine("File is required.");
+    return;
+}
+
+Console.WriteLine("Enter full path of file to write results.");
+string? outputFilename = Console.ReadLine();
+if (outputFilename is null)
+{
+    Console.WriteLine("Output filename is required.");
     return;
 }
 
 var lines = File.ReadAllLines(filename);
 if (lines.Length == 0)
 {
-    Console.WriteLine("File is empty");
+    Console.WriteLine("File is empty.");
     return;
 }
 
 if(!bool.TryParse(ConfigurationManager.AppSettings["RandomChange"], out bool randomChange) ||
     !int.TryParse(ConfigurationManager.AppSettings["RandomDivisor"], out int randomDivisor))
 {
-    Console.WriteLine("Missing application settings");
+    Console.WriteLine("Missing application settings.");
     return;
 }
 
@@ -30,22 +38,18 @@ var settings= new CashRegisterSettings(randomChange, randomDivisor);
 var cashRegister = new CashRegister(new USD(), settings);
 var transactions = TransactionParser.File(filename);
 
-foreach (var (amountOwed, amountPaid) in transactions)
+using (StreamWriter outputFile = new StreamWriter(outputFilename))
 {
-    try
+    foreach (var (amountOwed, amountPaid) in transactions)
     {
-        var change = cashRegister.Transaction(amountOwed, amountPaid);
-        var output = new List<string>(); ;
-        foreach (var item in change)
+        try
         {
-            output.Add($"{item.Value} {item.Key.GetType().Name}");
+            var change = cashRegister.Transaction(amountOwed, amountPaid);
+            outputFile.WriteLine(CashRegister.GetChangeText(change));
         }
-
-        Console.WriteLine(string.Join(", ", output));
-    }
-    catch (Exception ex)
-    {
-        Console.Write(ex.ToString());
-    }
+        catch (Exception ex)
+        {
+            Console.Write(ex.ToString());
+        }
+    }     
 }
-

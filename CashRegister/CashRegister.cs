@@ -1,5 +1,4 @@
 using CashRegisterNS.Currency;
-using System.Configuration;
 
 namespace CashRegisterNS
 {
@@ -18,6 +17,11 @@ namespace CashRegisterNS
         /// <returns>A dictionary representing the change, where the key is the denomination and the value is the count.</returns>
         public Dictionary<Money, int> Transaction(decimal amountOwed, decimal amountPaid)
         {
+            if (amountPaid < 0 || amountOwed < 0)
+            {
+               throw new Exception("Amounts must be positive");
+            }
+
             decimal change = amountPaid - amountOwed;
             if (change < 0)
             {
@@ -93,6 +97,36 @@ namespace CashRegisterNS
             }
 
             return change.Where(x => x.Value > 0).OrderBy(x => x.Key.Amount).Reverse().ToDictionary();
+        }
+
+
+        /// <summary>
+        /// Gets the text representation of the change given in a transaction.
+        /// </summary>
+        /// <param name="change">The dictionary representing the change, where the key is the denomination and the value is the count.</param>
+        /// <returns>A string representing the change in the format of "count, denomination".</returns>
+        public static string GetChangeText(Dictionary<Money, int> change)
+        {
+            if (change.Count == 0)
+            {
+                return Constants.NoChangeDue;
+            }
+            var output = new List<string>();
+
+            foreach (var item in change)
+            {
+                if (item.Value > 1)
+                {
+                    output.Add($"{item.Value} {item.Key.PluralName}");
+                    continue;
+                }
+                else
+                {
+                    output.Add($"{item.Value} {item.Key.GetType().Name}");
+                }
+            }
+
+            return string.Join(", ", output);
         }
     }
 }
