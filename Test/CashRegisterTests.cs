@@ -12,14 +12,14 @@ namespace Test
         [Test]
         public void NotEnoughMoney()
         {
-            Assert.Throws<Exception>(() => cashRegister.Transaction(20m, 10m));
+            Assert.That(cashRegister.Transaction(20m, 10m).Error, Contains.Substring(CashRegisterErrors.AmountPaidLessThanOwed));
         }
 
         [Test]
         public void AmountsMustBePositive()
         {
-            Assert.Throws<Exception>(() => cashRegister.Transaction(-20m, 10m));
-            Assert.Throws<Exception>(() => cashRegister.Transaction(20m, -10m));
+            Assert.That(cashRegister.Transaction(-20m, 10m).Error, Contains.Substring(CashRegisterErrors.NegativeAmount));
+            Assert.That(cashRegister.Transaction(20m, -10m).Error, Contains.Substring(CashRegisterErrors.NegativeAmount));
         }
 
         [Test]
@@ -40,16 +40,16 @@ namespace Test
         [TestCase(100, 200, ExpectedResult = "1 Hundred")]   
         public string CorrectChange(decimal price, decimal payment)
         {
-            var denominations = cashRegister.Transaction(price, payment);  
-            return CashRegister.GetChangeText(denominations);
+            var result = cashRegister.Transaction(price, payment);  
+            return CashRegister.GetChangeText(result.Value);
         }
 
         [Test]
         public void RandomChangeHasCorrectValue()
         {
-            var change = randomCashRegister.Transaction(3.33m, 5m);
+            var result = randomCashRegister.Transaction(3.33m, 5m);
             decimal total = 0;
-            foreach(var (denomination, count) in change)
+            foreach(var (denomination, count) in result.Value)
             {
                 total += denomination.Amount * count;
             }

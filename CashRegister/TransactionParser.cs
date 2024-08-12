@@ -1,4 +1,6 @@
-﻿namespace CashRegisterNS
+﻿using CashRegisterNS.Currency;
+
+namespace CashRegisterNS
 {
     public static class TransactionParser
     {
@@ -7,35 +9,31 @@
         /// </summary>
         /// <param name="filename">The path to the file to be parsed.</param>
         /// <returns>A sequence of tuples representing the amount owed and amount paid for each transaction.</returns>
-        public static IEnumerable<(decimal amountOwed, decimal amountPaid)> File(string filename)
+        public static ParserResult File(string filename)
         {
-            var lines = System.IO.File.ReadAllLines(filename);
-            if (lines.Length == 0)
-            {
-                throw new Exception("File is empty");
-            }
+            var result = new List<(decimal, decimal)>();
 
-            foreach (string line in lines)
+            foreach (var line in System.IO.File.ReadLines(filename))
             {
                 string[] amounts = line.Split(',');
                 if (amounts.Length != 2)
                 {
-                    throw new Exception("Invalid line: " + line);
+                    return new ParserResult { Error = $"{ParserErrors.InvalidLine}: " + line };
                 }
 
                 // Parse the amounts, amount owed is the first value, amount paid is the second value.
                 if (!decimal.TryParse(amounts[0], out decimal amountOwed))
                 {
-                    throw new Exception("Invalid amount owed: " + amounts[0]);
+                    return new ParserResult { Error = $"{ParserErrors.InvalidAmountOwed}: " + amounts[0] };
                 }
 
                 if (!decimal.TryParse(amounts[1], out decimal amountPaid))
                 {
-                    throw new Exception("Invalid amount paid: " + amounts[1]);
+                    return new ParserResult { Error = $"{ParserErrors.InvalidAmountPaid}: " + amounts[1] };
                 }
-
-                yield return (amountOwed, amountPaid);
+                result.Add((amountOwed, amountPaid));             
             }
+            return new ParserResult { Value = result };
         }
     }
 }

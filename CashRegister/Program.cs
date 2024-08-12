@@ -19,7 +19,7 @@ if (outputFilename is null)
     return;
 }
 
-var lines = File.ReadAllLines(filename);
+var lines = await File.ReadAllLinesAsync(filename);
 if (lines.Length == 0)
 {
     Console.WriteLine("File is empty.");
@@ -38,14 +38,19 @@ var settings= new CashRegisterSettings(randomChange, randomDivisor);
 var cashRegister = new CashRegister(new USD(), settings);
 var transactions = TransactionParser.File(filename);
 
-using (StreamWriter outputFile = new StreamWriter(outputFilename))
+using (StreamWriter outputFile = new(outputFilename))
 {
-    foreach (var (amountOwed, amountPaid) in transactions)
+    foreach (var (amountOwed, amountPaid) in transactions.Value)
     {
         try
         {
             var change = cashRegister.Transaction(amountOwed, amountPaid);
-            outputFile.WriteLine(CashRegister.GetChangeText(change));
+            if (change.Error != null)
+            {
+                await outputFile.WriteLineAsync(change.Error);
+                continue;
+            }
+            await outputFile.WriteLineAsync(CashRegister.GetChangeText(change.Value));
         }
         catch (Exception ex)
         {

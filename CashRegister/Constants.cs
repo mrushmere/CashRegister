@@ -10,4 +10,18 @@ namespace CashRegisterNS
     {
         public const string NoChangeDue = "No change due";
     }
+
+
+    public static class ParserErrors
+    {
+        public const string InvalidLine = "Invalid line";
+        public const string InvalidAmountOwed = "Invalid amount owed";
+        public const string InvalidAmountPaid = "Invalid amount paid";
+    }
+
+    public static class  CashRegisterErrors
+    {
+        public const string NegativeAmount = "Amounts must be positive"; 
+        public const string AmountPaidLessThanOwed = "Amount paid is less than amount owed";
+    }
 }

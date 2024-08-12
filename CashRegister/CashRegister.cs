@@ -9,32 +9,32 @@ namespace CashRegisterNS
     {
         public readonly ICurrency currency = currency;
 
-        /// <summary>
-        /// Calculates the change to be given based on the amount owed and the amount paid.
-        /// </summary>
-        /// <param name="amountOwed">The amount owed.</param>
-        /// <param name="amountPaid">The amount paid.</param>
-        /// <returns>A dictionary representing the change, where the key is the denomination and the value is the count.</returns>
-        public Dictionary<Money, int> Transaction(decimal amountOwed, decimal amountPaid)
+        public Result Transaction(decimal amountOwed, decimal amountPaid)
         {
             if (amountPaid < 0 || amountOwed < 0)
             {
-               throw new Exception("Amounts must be positive");
+               return new Result { Error = CashRegisterErrors.NegativeAmount};
+                /// <summary>
+                /// Performs a transaction in the cash register by calculating the change based on the amount owed and the amount paid.
+                /// </summary>
+                /// <param name="amountOwed">The amount owed in the transaction.</param>
+                /// <param name="amountPaid">The amount paid in the transaction.</param>
+                /// <returns>A Result object containing either the calculated change or an error if the transaction is invalid.</returns>
             }
 
             decimal change = amountPaid - amountOwed;
             if (change < 0)
             {
-                throw new Exception("Amount paid is less than amount owed");
+                return new Result { Error = CashRegisterErrors.AmountPaidLessThanOwed };
             }
 
             // Check that random change is enabled, the divisor is set, and that the amount owed is divisible by the divisor.
             if (settings.RandomChange && settings.RandomDivisor != null && (int)(amountOwed * 100) % settings.RandomDivisor == 0)
             {
-                return RandomChange(change);
+                return new Result { Value = RandomChange(change) };
             }
 
-            return Change(change);
+            return new Result { Value = Change(change) };
         }
 
 
@@ -46,6 +46,11 @@ namespace CashRegisterNS
         private Dictionary<Money, int> Change(decimal amount)
         {
             var change = new Dictionary<Money, int>();
+
+            if (amount <= 0)
+            {
+                return change;
+            }
 
             var temp = amount;
             foreach (Money denomination in currency.GetDenominations().Where(d => d.Amount <= amount))
@@ -68,17 +73,22 @@ namespace CashRegisterNS
         /// <returns>A dictionary representing the change, where the key is the denomination and the value is the count.</returns>
         private Dictionary<Money, int> RandomChange(decimal amount)
         {
+            var change = new Dictionary<Money, int>();
+
+            if (amount <= 0)
+            {
+                return change;
+            }
+
             // Shuffle the denominations.
             var denominations = currency.GetDenominations().Where(d => d.Amount <= amount).ToList();
-
-            var change = new Dictionary<Money, int>();
 
             var temp = amount;
             while (temp > 0)
             {
                 // Select a random denomination.
                 denominations = denominations.OrderBy(x => Guid.NewGuid()).ToList();
-                var denomination = denominations.First();
+                var denomination = denominations[0];
                 var count = Convert.ToInt32(Math.Floor(temp / denomination.Amount));
                 if (count > 0)
                 {
@@ -118,7 +128,6 @@ namespace CashRegisterNS
                 if (item.Value > 1)
                 {
                     output.Add($"{item.Value} {item.Key.PluralName}");
-                    continue;
                 }
                 else
                 {

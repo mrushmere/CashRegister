@@ -1,21 +1,26 @@
-﻿using CashRegisterNS;
-
-public class CashRegisterSettings : ICashRegisterSettings
+﻿namespace CashRegisterNS
 {
-    public readonly bool randomChange;
-    public readonly int? randomDivisor;
-
-    public CashRegisterSettings(bool randomChange, int? randomDivisor)
+    /// <summary>
+    /// Represents the settings for a cash register.
+    /// </summary>
+    public class CashRegisterSettings : ICashRegisterSettings
     {
-        this.randomChange = randomChange;
+        public readonly bool randomChange;
+        public readonly int? randomDivisor;
 
-        if( randomDivisor > 0)
+        public CashRegisterSettings(bool randomChange, int? randomDivisor)
         {
-            this.randomDivisor = randomDivisor;
+            this.randomChange = randomChange;
+
+            if (randomDivisor > 0)
+            {
+                this.randomDivisor = randomDivisor;
+            }
         }
+
+        public bool RandomChange => randomChange;
+
+        public int? RandomDivisor => randomDivisor;
     }
 
-    public bool RandomChange => randomChange;
-
-    public int? RandomDivisor => randomDivisor;
 }
