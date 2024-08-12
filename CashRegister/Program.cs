@@ -1,5 +1,6 @@
 ﻿using CashRegisterNS;
 using CashRegisterNS.Currency;
+using System.Configuration;
 
 
 Console.WriteLine("Enter filename");
@@ -17,35 +18,34 @@ if (lines.Length == 0)
     return;
 }
 
-var cashRegister = new CashRegister(new USD());
-
-foreach (string line in lines)
+if(!bool.TryParse(ConfigurationManager.AppSettings["RandomChange"], out bool randomChange) ||
+    !int.TryParse(ConfigurationManager.AppSettings["RandomDivisor"], out int randomDivisor))
 {
-    string[] amounts = line.Split(',');
-    if (amounts.Length != 2)
-    {
-        Console.WriteLine("Invalid line: " + line);
-        continue;
-    }
-
-    // Parse the amounts, amount owed is the first value, amount paid is the second value.
-    if (!decimal.TryParse(amounts[0], out decimal amountOwed))
-    {
-        Console.WriteLine("Invalid amount owed: " + amounts[0]);
-        continue;
-    }
-    if (!decimal.TryParse(amounts[1], out decimal amountPaid))
-    {
-        Console.WriteLine("Invalid amount paid: " + amounts[1]);
-        continue;
-    }
-    var change = cashRegister.Transaction(amountOwed, amountPaid);
-
-    var output = new List<string>();;
-    foreach (var item in change)
-    {
-        output.Add($"{item.Value} {item.Key.GetType().Name}");
-    }
-
-    Console.WriteLine(string.Join(", ", output));
+    Console.WriteLine("Missing application settings");
+    return;
 }
+
+var settings= new CashRegisterSettings(randomChange, randomDivisor);
+
+var cashRegister = new CashRegister(new USD(), settings);
+var transactions = TransactionParser.File(filename);
+
+foreach (var (amountOwed, amountPaid) in transactions)
+{
+    try
+    {
+        var change = cashRegister.Transaction(amountOwed, amountPaid);
+        var output = new List<string>(); ;
+        foreach (var item in change)
+        {
+            output.Add($"{item.Value} {item.Key.GetType().Name}");
+        }
+
+        Console.WriteLine(string.Join(", ", output));
+    }
+    catch (Exception ex)
+    {
+        Console.Write(ex.ToString());
+    }
+}
+

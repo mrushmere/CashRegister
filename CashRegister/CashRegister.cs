@@ -3,38 +3,48 @@ using System.Configuration;
 
 namespace CashRegisterNS
 {
-    public class CashRegister(ICurrency currency)
+    /// <summary>
+    /// Represents a cash register that handles transactions and calculates change.
+    /// </summary>
+    public class CashRegister(ICurrency currency, ICashRegisterSettings settings)
     {
-        private readonly ICurrency currency = currency;
+        public readonly ICurrency currency = currency;
 
+        /// <summary>
+        /// Calculates the change to be given based on the amount owed and the amount paid.
+        /// </summary>
+        /// <param name="amountOwed">The amount owed.</param>
+        /// <param name="amountPaid">The amount paid.</param>
+        /// <returns>A dictionary representing the change, where the key is the denomination and the value is the count.</returns>
         public Dictionary<Money, int> Transaction(decimal amountOwed, decimal amountPaid)
         {
             decimal change = amountPaid - amountOwed;
-
             if (change < 0)
             {
                 throw new Exception("Amount paid is less than amount owed");
             }
 
-            if (bool.TryParse(ConfigurationManager.AppSettings["RandomChange"], out bool randomChange) && randomChange)
+            // Check that random change is enabled, the divisor is set, and that the amount owed is divisible by the divisor.
+            if (settings.RandomChange && settings.RandomDivisor != null && (int)(amountOwed * 100) % settings.RandomDivisor == 0)
             {
-                if(int.TryParse(ConfigurationManager.AppSettings["RandomDivisor"], out int randomDivisor) && 
-                    (int)(amountOwed*100) % randomDivisor == 0)
-                {
-                    return RandomChange(change);
-                }
+                return RandomChange(change);
             }
-            
+
             return Change(change);
         }
 
 
+        /// <summary>
+        /// Generates the change using the available denominations.
+        /// </summary>
+        /// <param name="amount">The amount of change to be generated.</param>
+        /// <returns>A dictionary representing the change, where the key is the denomination and the value is the count.</returns>
         private Dictionary<Money, int> Change(decimal amount)
         {
             var change = new Dictionary<Money, int>();
 
             var temp = amount;
-            foreach (Money denomination in currency.GetDenominations())
+            foreach (Money denomination in currency.GetDenominations().Where(d => d.Amount <= amount))
             {
                 var count = Convert.ToInt32(Math.Floor(temp / denomination.Amount));
                 if (count > 0)
@@ -44,41 +54,45 @@ namespace CashRegisterNS
                 }
             }
 
-            return change.OrderBy(x => x.Key.Amount).Reverse().ToDictionary();
+            return change;
         }
 
+        /// <summary>
+        /// Generates random change using the available denominations.
+        /// </summary>
+        /// <param name="amount">The amount of change to be generated.</param>
+        /// <returns>A dictionary representing the change, where the key is the denomination and the value is the count.</returns>
         private Dictionary<Money, int> RandomChange(decimal amount)
         {
-            // Shuffle the denominations
-            var denominations = currency.GetDenominations();
+            // Shuffle the denominations.
+            var denominations = currency.GetDenominations().Where(d => d.Amount <= amount).ToList();
 
             var change = new Dictionary<Money, int>();
 
             var temp = amount;
             while (temp > 0)
             {
-                // select a random denomination
+                // Select a random denomination.
                 denominations = denominations.OrderBy(x => Guid.NewGuid()).ToList();
                 var denomination = denominations.First();
                 var count = Convert.ToInt32(Math.Floor(temp / denomination.Amount));
                 if (count > 0)
                 {
-                    // add a number between 0 and the count to the change
+                    // Add a random count between 0 and the maximum count to the change.
                     var randomCount = new Random().Next(0, count + 1);
                     if (!change.TryAdd(denomination, randomCount))
                     {
-                        change[denomination] += randomCount;   
+                        change[denomination] += randomCount;
                     }
                     temp -= randomCount * denomination.Amount;
-
-                } else
+                }
+                else
                 {
-
-                   denominations.Remove(denomination);
+                    denominations.Remove(denomination);
                 }
             }
 
-            return change.OrderBy(x => x.Key.Amount).Reverse().ToDictionary();
+            return change.Where(x => x.Value > 0).OrderBy(x => x.Key.Amount).Reverse().ToDictionary();
         }
     }
 }
