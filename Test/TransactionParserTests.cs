@@ -9,7 +9,7 @@ namespace Test
         public void ReadFile()
         {
 
-            var result = TransactionParser.File("./test.txt").ToList();
+            var result = TransactionParser.File("./TestFiles/test.txt").ToList();
             Assert.Multiple(() =>
             {
                 Assert.That(result[0].amountOwed, Is.EqualTo(2.12m));
@@ -21,5 +21,22 @@ namespace Test
             });
         }
 
+        [Test]
+        public void ReadFile_EmptyFile()
+        {
+            Assert.Throws<Exception>(() => TransactionParser.File("./TestFiles/empty.txt").ToList());
+        }
+
+        [Test]
+        public void ReadFile_BadFormat()
+        {
+            Assert.Throws<Exception>(() => TransactionParser.File("./TestFiles/badformat.txt").ToList());
+        }
+
+        [Test]
+        public void ReadFile_InvalidAmount()
+        {
+            Assert.Throws<Exception>(() => TransactionParser.File("./TestFiles/invalidamount.txt").ToList());
+        }
     }
 }
